@@ -41,7 +41,8 @@ Edge/Borda: e1, e2, e3, e4
 
 Hosts (Folhas): H1x, H2x, H3x, H4x (número de hosts gerado aleatoriamente)
 
-Endereçamento IP
+### Endereçamento IP
+
 O sistema atribui endereços IP baseados em sub-redes (CIDR) para demonstrar o roteamento hierárquico:
 
 Sub-rede 1 (e1): 192.168.1.0/27 (Hosts: H1x)
