@@ -256,6 +256,53 @@ def get_path_latency(G, src, dst):
     except nx.NetworkXNoPath:
         return float('inf')
 
+def get_host_addresses(G, src_host, dst_host):
+    """Etapa 2: Obtém e exibe os endereços IP dos hosts de origem e destino."""
+    print("\n" + "="*60)
+    print("[Etapa 2] Obtenção de Endereços IP do Host Origem e Destino")
+    print("="*60)
+    
+    # Validação dos hosts
+    if src_host not in G.nodes:
+        print(f"\n✗ ERRO: Host '{src_host}' não existe na rede!")
+        return None, None
+    
+    if dst_host not in G.nodes:
+        print(f"\n✗ ERRO: Host '{dst_host}' não existe na rede!")
+        return None, None
+    
+    if src_host not in ip_addresses:
+        print(f"\n✗ ERRO: IP do host '{src_host}' não está mapeado!")
+        return None, None
+    
+    if dst_host not in ip_addresses:
+        print(f"\n✗ ERRO: IP do host '{dst_host}' não está mapeado!")
+        return None, None
+    
+    # Obter os IPs
+    src_ip = ip_addresses[src_host]
+    dst_ip = ip_addresses[dst_host]
+    
+    # Exibir informações de origem
+    print(f"\n✓ Host de Origem Localizado:")
+    print(f"  - Nome do Host: {src_host}")
+    print(f"  - Endereço IP: {src_ip}")
+    
+    # Exibir informações de destino
+    print(f"\n✓ Host de Destino Localizado:")
+    print(f"  - Nome do Host: {dst_host}")
+    print(f"  - Endereço IP: {dst_ip}")
+    
+    # Verificar conectividade
+    if not nx.has_path(G, src_host, dst_host):
+        print(f"\n✗ AVISO: Host de destino {dst_host} ({dst_ip}) é inalcançável a partir de {src_host} ({src_ip})!")
+        return None, None
+    
+    print(f"\n✓ Conectividade: OK (Caminho existe entre os hosts)")
+    print("="*60 + "\n")
+    
+    return src_ip, dst_ip
+
 def xprobe_rtt(G, src, dst, num_samples=3):
     """Simula o XProbe (Medição de RTT) com N amostras."""
     if src not in G.nodes or dst not in G.nodes:
@@ -295,8 +342,8 @@ def xprobe_rtt(G, src, dst, num_samples=3):
 def menu():
     print("\n=== Simulador de Rede ===")
     print("1. Visualizar Topologia")
-    print("2. Exibir Tabelas de Roteamento (Quadro 1)")
-    print("3. Simulação XProbe/RTT (Quadro 1)")
+    print("2. Exibir Tabelas de Roteamento")
+    print("3. Obter IPs e Executar Simulação XProbe/RTT
     print("4. Reconfigurar Rede")
     print("5. Sair")
     choice = input("Escolha uma opção: ")
@@ -352,7 +399,14 @@ if __name__ == "__main__":
             print("\nHosts disponíveis:", hosts)
             src = input("Digite o host de origem (ex: H11): ")
             dst = input("Digite o host de destino (ex: H21): ")
-            xprobe_rtt(graph, src, dst)
+            
+            # Etapa 2: Obter endereços IP
+            src_ip, dst_ip = get_host_addresses(graph, src, dst)
+            
+            # Se a Etapa 2 foi bem-sucedida, executar a Etapa 3 (XProbe/RTT)
+            if src_ip is not None and dst_ip is not None:
+                print("\n[Etapa 3] Executando Simulação XProbe/RTT...")
+                xprobe_rtt(graph, src, dst)
         elif choice == "4":
             print("\n[Etapa 2] Reconfigurar Rede")
             config_choice = config_menu()
