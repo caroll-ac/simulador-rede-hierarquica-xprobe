@@ -305,37 +305,58 @@ def get_host_addresses(G, src_host, dst_host):
 
 def xprobe_rtt(G, src, dst, num_samples=3):
     """Simula o XProbe (Medição de RTT) com N amostras."""
-    if src not in G.nodes or dst not in G.nodes:
-        print(f" Erro: Host {src} ou {dst} não existe na rede!")
-        return
+    print("\n" + "="*60)
+    print("[Etapa 3] Simulação XProbe/RTT - Verificação de Disponibilidade")
+    print("="*60)
     
+    # Validação básica dos hosts
+    if src not in G.nodes or dst not in G.nodes:
+        print(f"\n✗ ERRO: Host {src} ou {dst} não existe na rede!")
+        return None
+    
+    # Verificação de conectividade (host destino ativo)
     if not nx.has_path(G, src, dst):
-        print(f" Host {dst} inalcançável a partir de {src}!")
-        return
+        print(f"\n✗ ERRO: Host destino {dst} ({ip_addresses[dst]}) é INALCANÇÁVEL a partir de {src} ({ip_addresses[src]})!")
+        print("❌ HOST DESTINO INATIVO ou SEM CAMINHO DE REDE")
+        print("="*60 + "\n")
+        return None
+    
+    print(f"\n✓ Host Destino ATIVO e ALCANÇÁVEL")
+    print(f"  - Origem: {src} ({ip_addresses[src]})")
+    print(f"  - Destino: {dst} ({ip_addresses[dst]})")
 
     rtt_times = []
     
-    print(f"\n---  Simulação XProbe/RTT ---")
-    print(f" Origem: {src} ({ip_addresses[src]})")
-    print(f" Destino: {dst} ({ip_addresses[dst]})")
+    print(f"\n--- Coleta de Amostras de RTT ---")
     
     path = nx.shortest_path(G, source=src, target=dst)
-    print(f" Rota (Saltos): {path}")
+    print(f"  - Rota (Saltos): {' → '.join(path)}")
+    print(f"  - Número de saltos: {len(path) - 1}\n")
 
     for i in range(num_samples):
         # Simula o tempo de latência de ida e volta
         rtt = get_path_latency(G, src, dst)
         rtt_times.append(rtt)
-        print(f" Amostra {i+1}: RTT = {rtt:.4f} ms")
+        print(f"  Amostra {i+1}: RTT = {rtt:.4f} ms")
         time.sleep(0.5) # Simula um pequeno intervalo entre as amostras
 
     # Cálculo do RTT Médio
     if rtt_times:
         rtt_mean = sum(rtt_times) / len(rtt_times)
-        print("\n--- ✅ Estatísticas do XProbe (RTT) ---")
-        print(f" RTT Mínimo: {min(rtt_times):.4f} ms")
-        print(f" RTT Máximo: {max(rtt_times):.4f} ms")
-        print(f" **RTT MÉDIO (3 Amostras): {rtt_mean:.4f} ms**")
+        rtt_min = min(rtt_times)
+        rtt_max = max(rtt_times)
+        
+        print("\n" + "="*60)
+        print("✅ RESULTADO DA SIMULAÇÃO XPROBE")
+        print("="*60)
+        print(f"  RTT Mínimo: {rtt_min:.4f} ms")
+        print(f"  RTT Máximo: {rtt_max:.4f} ms")
+        print(f"  📊 RTT MÉDIO: {rtt_mean:.4f} ms")
+        print("="*60 + "\n")
+        
+        return rtt_mean
+    
+    return None
     
 # --- Funções do Menu (Modificadas) ---
 
@@ -343,7 +364,7 @@ def menu():
     print("\n=== Simulador de Rede ===")
     print("1. Visualizar Topologia")
     print("2. Exibir Tabelas de Roteamento")
-    print("3. Obter IPs e Executar Simulação XProbe/RTT
+    print("3. Obter IPs e Executar Simulação XProbe/RTT")
     print("4. Reconfigurar Rede")
     print("5. Sair")
     choice = input("Escolha uma opção: ")
