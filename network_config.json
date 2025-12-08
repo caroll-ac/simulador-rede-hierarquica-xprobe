@@ -27,5 +27,15 @@
     },
     "core": {
         "root": "192.168.1.254"
+    },
+    "connections": {
+        "core_to_aggregation": "fibra_optica",
+        "aggregation_to_edge": "fibra_optica",
+        "edge_to_host": "par_trancado"
+    },
+    "bandwidth": {
+        "core_to_aggregation": "10 Gbps",
+        "aggregation_to_edge": "1 Gbps",
+        "edge_to_host": "1 Gbps"
     }
 }

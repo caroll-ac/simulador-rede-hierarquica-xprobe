@@ -51,6 +51,11 @@ def create_default_config():
             "core_to_aggregation": "fibra_optica",
             "aggregation_to_edge": "fibra_optica",
             "edge_to_host": "par_trancado"
+        },
+        "bandwidth": {
+            "core_to_aggregation": "10 Gbps",
+            "aggregation_to_edge": "1 Gbps",
+            "edge_to_host": "1 Gbps"
         }
     }
 
@@ -146,30 +151,40 @@ def setup_network_from_config(config):
         "edge_to_host": "par_trancado"
     })
 
+    # Obter largura de banda do config
+    bandwidth_config = config.get('bandwidth', {
+        "core_to_aggregation": "10 Gbps",
+        "aggregation_to_edge": "1 Gbps",
+        "edge_to_host": "1 Gbps"
+    })
+
     # Conectar switches na topologia de árvore com tipos de conexão
     # Core para Aggregation
     conn_type = connections_config.get("core_to_aggregation", "fibra_optica")
-    graph.add_edge("root", "a1", connection_type=conn_type)
-    graph.add_edge("root", "a2", connection_type=conn_type)
+    bandwidth = bandwidth_config.get("core_to_aggregation", "10 Gbps")
+    graph.add_edge("root", "a1", connection_type=conn_type, bandwidth=bandwidth)
+    graph.add_edge("root", "a2", connection_type=conn_type, bandwidth=bandwidth)
 
     # Aggregation para Edge
     conn_type = connections_config.get("aggregation_to_edge", "fibra_optica")
-    graph.add_edge("a1", "e1", connection_type=conn_type)
-    graph.add_edge("a1", "e2", connection_type=conn_type)
-    graph.add_edge("a2", "e3", connection_type=conn_type)
-    graph.add_edge("a2", "e4", connection_type=conn_type)
+    bandwidth = bandwidth_config.get("aggregation_to_edge", "1 Gbps")
+    graph.add_edge("a1", "e1", connection_type=conn_type, bandwidth=bandwidth)
+    graph.add_edge("a1", "e2", connection_type=conn_type, bandwidth=bandwidth)
+    graph.add_edge("a2", "e3", connection_type=conn_type, bandwidth=bandwidth)
+    graph.add_edge("a2", "e4", connection_type=conn_type, bandwidth=bandwidth)
 
     # Edge para Hosts
     conn_type = connections_config.get("edge_to_host", "par_trancado")
+    bandwidth = bandwidth_config.get("edge_to_host", "1 Gbps")
     for host in hosts:
         if host.startswith('H1'):
-            graph.add_edge("e1", host, connection_type=conn_type)
+            graph.add_edge("e1", host, connection_type=conn_type, bandwidth=bandwidth)
         elif host.startswith('H2'):
-            graph.add_edge("e2", host, connection_type=conn_type)
+            graph.add_edge("e2", host, connection_type=conn_type, bandwidth=bandwidth)
         elif host.startswith('H3'):
-            graph.add_edge("e3", host, connection_type=conn_type)
+            graph.add_edge("e3", host, connection_type=conn_type, bandwidth=bandwidth)
         elif host.startswith('H4'):
-            graph.add_edge("e4", host, connection_type=conn_type)
+            graph.add_edge("e4", host, connection_type=conn_type, bandwidth=bandwidth)
 
     # Tabela de roteamento
     routing_table = {
@@ -212,21 +227,21 @@ def setup_network_random():
     connection_types = ["par_trancado", "fibra_optica", "sem_fio", "cabo_coaxial"]
 
     # Conectando os switches na topologia de árvore
-    graph.add_edge("root", "a1", connection_type=random.choice(connection_types))
-    graph.add_edge("root", "a2", connection_type=random.choice(connection_types))
-    graph.add_edge("a1", "e1", connection_type=random.choice(connection_types))
-    graph.add_edge("a1", "e2", connection_type=random.choice(connection_types))
-    graph.add_edge("a2", "e3", connection_type=random.choice(connection_types))
-    graph.add_edge("a2", "e4", connection_type=random.choice(connection_types))
+    graph.add_edge("root", "a1", connection_type=random.choice(connection_types), bandwidth="10 Gbps")
+    graph.add_edge("root", "a2", connection_type=random.choice(connection_types), bandwidth="10 Gbps")
+    graph.add_edge("a1", "e1", connection_type=random.choice(connection_types), bandwidth="1 Gbps")
+    graph.add_edge("a1", "e2", connection_type=random.choice(connection_types), bandwidth="1 Gbps")
+    graph.add_edge("a2", "e3", connection_type=random.choice(connection_types), bandwidth="1 Gbps")
+    graph.add_edge("a2", "e4", connection_type=random.choice(connection_types), bandwidth="1 Gbps")
 
     for host in ips_e1.keys():
-        graph.add_edge("e1", host, connection_type=random.choice(connection_types))
+        graph.add_edge("e1", host, connection_type=random.choice(connection_types), bandwidth="1 Gbps")
     for host in ips_e2.keys():
-        graph.add_edge("e2", host, connection_type=random.choice(connection_types))
+        graph.add_edge("e2", host, connection_type=random.choice(connection_types), bandwidth="1 Gbps")
     for host in ips_e3.keys():
-        graph.add_edge("e3", host, connection_type=random.choice(connection_types))
+        graph.add_edge("e3", host, connection_type=random.choice(connection_types), bandwidth="1 Gbps")
     for host in ips_e4.keys():
-        graph.add_edge("e4", host, connection_type=random.choice(connection_types))
+        graph.add_edge("e4", host, connection_type=random.choice(connection_types), bandwidth="1 Gbps")
 
     # Endereçamento IP de cada nó
     ip_addresses = {
@@ -320,6 +335,23 @@ def plot_graph(G):
     plt.axis('off')
     plt.tight_layout()
     plt.show()
+
+
+def display_link_capacities(G):
+    """Exibe as capacidades de cada link na rede."""
+    print("\n" + "=" * 80)
+    print("CAPACIDADES DOS ENLACES DA REDE")
+    print("=" * 80)
+    print(f"{'Nó Origem':<12} {'Nó Destino':<12} {'Tipo de Conexão':<20} {'Capacidade':<15}")
+    print("-" * 80)
+    
+    for u, v, data in G.edges(data=True):
+        conn_type = data.get('connection_type', 'desconhecido')
+        conn_name = CONNECTION_NAMES.get(conn_type, conn_type)
+        bandwidth = data.get('bandwidth', 'não especificado')
+        print(f"{u:<12} ↔ {v:<12} {conn_name:<20} {bandwidth:<15}")
+    
+    print("=" * 80 + "\n")
 
 
 def display_routing_tables(tables):
@@ -483,9 +515,10 @@ def menu():
     print("1. Visualizar Topologia")
     print("2. Exibir Tabelas de Roteamento")
     print("3. Exibir Tipos de Conexão")
-    print("4. Obter IPs e Executar Simulação XProbe/RTT")
-    print("5. Reconfigurar Rede")
-    print("6. Sair")
+    print("4. Exibir Capacidades dos Enlaces")
+    print("5. Obter IPs e Executar Simulação XProbe/RTT")
+    print("6. Reconfigurar Rede")
+    print("7. Sair")
     choice = input("Escolha uma opção: ")
     return choice
 
@@ -540,6 +573,8 @@ if __name__ == "__main__":
         elif choice == "3":
             display_connection_types(graph)
         elif choice == "4":
+            display_link_capacities(graph)
+        elif choice == "5":
             print("\nHosts disponíveis:", hosts)
             src = input("Digite o host de origem (ex: H11): ")
             dst = input("Digite o host de destino (ex: H21): ")
@@ -549,7 +584,7 @@ if __name__ == "__main__":
             if src_ip is not None and dst_ip is not None:
                 print("\n[Etapa 3] Executando Simulação XProbe/RTT...")
                 xprobe_rtt(graph, src, dst)
-        elif choice == "5":
+        elif choice == "6":
             print("\n[Etapa 2] Reconfigurar Rede")
             config_choice = config_menu()
 
@@ -572,7 +607,7 @@ if __name__ == "__main__":
 
             print(f"\nHosts Gerados: {hosts}")
             print(f"Total de hosts: {len(hosts)}")
-        elif choice == "6":
+        elif choice == "7":
             print("Saindo...")
             break
         else:
