@@ -23,7 +23,7 @@ Execute o arquivo via terminal:
 
 ```Bash
 
-python simulador_redeV2.py
+python simulador_rede.py
 
 ```
 
