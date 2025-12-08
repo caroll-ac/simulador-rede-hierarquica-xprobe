@@ -276,7 +276,7 @@ CONNECTION_COLORS = {
     "par_trancado": "#FFA500",  # Laranja
     "fibra_optica": "#00FF00",  # Verde
     "sem_fio": "#FF1493",  # Rosa
-    "cabo_coaxial": "#FFD700"  # Dourado
+    "cabo_coaxial": "#0000FF"  # Azul
 }
 
 CONNECTION_NAMES = {
@@ -286,9 +286,48 @@ CONNECTION_NAMES = {
     "cabo_coaxial": "Cabo Coaxial"
 }
 
+def get_path_latency(G, src, dst, packet_size_bits=8000):
+    """Calcula a latência (RTT) simulada baseada na largura de banda e tipo de meio."""
+
+    link_speed_map = {
+        "par_trancado": 1_000_000_000,      # 1 Gbps
+        "fibra_optica": 10_000_000_000,     # 10 Gbps
+        "cabo_coaxial": 500_000_000,        # 500 Mbps
+        "sem_fio": 300_000_000              # 300 Mbps
+    }
+
+    propagation_delay_map = {
+        "par_trancado": 0.000005,
+        "fibra_optica": 0.0000005,
+        "cabo_coaxial": 0.000006,
+        "sem_fio": 0.00000033
+    }
+
+    try:
+        path = nx.shortest_path(G, source=src, target=dst)
+        total_rtt = 0
+
+        for i in range(len(path) - 1):
+            u, v = path[i], path[i + 1]
+            dtype = G[u][v].get("connection_type", "fibra_optica")
+
+            link_speed = link_speed_map.get(dtype, 1_000_000_000)
+            prop_delay = propagation_delay_map.get(dtype, 0.000005)
+
+            transmission_delay = packet_size_bits / link_speed
+            total_rtt += (transmission_delay + prop_delay) * 2
+
+        total_rtt *= random.uniform(0.95, 1.10)
+
+        return total_rtt * 1000
+
+    except nx.NetworkXNoPath:
+        return float('inf')
+
 
 def plot_graph(G):
     """Visualiza a topologia da rede com cores para cada tipo de conexão e IPs abaixo dos nós."""
+    # Define a camada de cada nó para o layout multipartite
     layers = {}
     layers["root"] = 0
     layers["a1"] = 1
@@ -303,15 +342,16 @@ def plot_graph(G):
     for node, layer in layers.items():
         G.nodes[node]["layer"] = layer
 
+    # Posição dos nós (hierárquico)
     pos = nx.multipartite_layout(G, subset_key="layer", align="vertical")
 
     plt.figure(figsize=(14, 10))
 
-    # Desenhar nós
+    # --- Desenhar nós ---
     nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=2000)
     nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
 
-    # Desenhar arestas por tipo de conexão
+    # --- Desenhar arestas por tipo de conexão ---
     for conn_type, color in CONNECTION_COLORS.items():
         edges_of_type = [(u, v) for u, v, data in G.edges(data=True)
                          if data.get('connection_type') == conn_type]
@@ -319,15 +359,30 @@ def plot_graph(G):
             nx.draw_networkx_edges(G, pos, edgelist=edges_of_type,
                                    edge_color=color, width=3, alpha=0.7)
 
-    # Adicionar labels de IPs abaixo do nó
+    # --- Adicionar labels de IPs abaixo do nó ---
     ip_labels = {node: ip_addresses[node] for node in G.nodes if node in ip_addresses}
     offset_pos = {node: (x, y-0.1) for node, (x, y) in pos.items()}  # move o label um pouco para baixo
     nx.draw_networkx_labels(G, offset_pos, labels=ip_labels, font_size=9, font_color='black', font_weight='normal')
 
-    # Legenda
-    legend_elements = [mpatches.Patch(color=color, label=CONNECTION_NAMES[conn_type])
-                       for conn_type, color in CONNECTION_COLORS.items()
-                       if any(data.get('connection_type') == conn_type for _, _, data in G.edges(data=True))]
+    # --- Legenda com velocidades dos links ---
+    # Define velocidades realistas para cada tipo de conexão
+    bandwidth_text = {
+        "par_trancado": "1000 Mbps",
+        "fibra_optica": "100000 Mbps",
+        "sem_fio": "300 Mbps",
+        "cabo_coaxial": "500 Mbps"
+    }
+
+    legend_elements = []
+    for conn_type, color in CONNECTION_COLORS.items():
+        if any(data.get("connection_type") == conn_type for _, _, data in G.edges(data=True)):
+            legend_elements.append(
+                mpatches.Patch(
+                    color=color,
+                    label=f"{CONNECTION_NAMES[conn_type]} - {bandwidth_text[conn_type]}"
+                )
+            )
+
     plt.legend(handles=legend_elements, loc='lower left', fontsize=10,
                title='Tipos de Conexão', title_fontsize=11)
 
@@ -337,6 +392,7 @@ def plot_graph(G):
     plt.show()
 
 
+
 def display_link_capacities(G):
     """Exibe as capacidades de cada link na rede."""
     print("\n" + "=" * 80)
@@ -344,13 +400,13 @@ def display_link_capacities(G):
     print("=" * 80)
     print(f"{'Nó Origem':<12} {'Nó Destino':<12} {'Tipo de Conexão':<20} {'Capacidade':<15}")
     print("-" * 80)
-    
+
     for u, v, data in G.edges(data=True):
         conn_type = data.get('connection_type', 'desconhecido')
         conn_name = CONNECTION_NAMES.get(conn_type, conn_type)
         bandwidth = data.get('bandwidth', 'não especificado')
         print(f"{u:<12} ↔ {v:<12} {conn_name:<20} {bandwidth:<15}")
-    
+
     print("=" * 80 + "\n")
 
 
