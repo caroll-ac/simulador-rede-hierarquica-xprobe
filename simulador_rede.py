@@ -601,7 +601,6 @@ if __name__ == "__main__":
     if config_choice == "1":
         config = load_network_config()
         graph, ip_addresses, hosts, routing_table = setup_network_from_config(config)
-        assign_connection_types(graph, hosts)
         print(f"\n✓ Rede configurada a partir do arquivo.")
     elif config_choice == "2":
         graph, ip_addresses, hosts, routing_table = setup_network_random()
@@ -647,7 +646,6 @@ if __name__ == "__main__":
             if config_choice == "1":
                 config = load_network_config()
                 graph, ip_addresses, hosts, routing_table = setup_network_from_config(config)
-                assign_connection_types(graph, hosts)
                 print(f"\n✓ Rede reconfigurada a partir do arquivo.")
             elif config_choice == "2":
                 graph, ip_addresses, hosts, routing_table = setup_network_random()
@@ -656,7 +654,6 @@ if __name__ == "__main__":
             elif config_choice == "3":
                 config = create_default_config()
                 graph, ip_addresses, hosts, routing_table = setup_network_from_config(config)
-                assign_connection_types(graph, hosts)
                 print(f"\n✓ Rede reconfigurada com valores padrão e pronta para uso.")
             else:
                 print("Opção inválida.")
